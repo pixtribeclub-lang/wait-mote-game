@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>WaitMote 等待微光</title>
+  <style>
+    :root{color-scheme:dark;--ink:#eef7ff;--muted:#a7bdd4;--panel:rgba(11,18,42,.78);--cyan:#8ff7ff;--gold:#ffd36e;--pink:#ff9dda;--green:#9dffb4}
+    *{box-sizing:border-box;-webkit-tap-highlight-color:transparent} html,body{margin:0;height:100%;overflow:hidden;background:#050916;color:var(--ink);font-family:ui-rounded,system-ui,-apple-system,"Segoe UI",sans-serif}
+    body{display:flex;align-items:center;justify-content:center;padding:env(safe-area-inset-top) 10px env(safe-area-inset-bottom)}
+    #app{width:min(100vw,480px);height:min(100vh,860px);position:relative;border-radius:28px;overflow:hidden;box-shadow:0 24px 80px #000;background:linear-gradient(#07112c,#120924 62%,#08151e)}
+    canvas{width:100%;height:100%;display:block;touch-action:none}
+    .hud{position:absolute;left:14px;right:14px;top:12px;pointer-events:none}.card{background:var(--panel);border:1px solid rgba(150,230,255,.2);border-radius:18px;padding:10px 12px;backdrop-filter:blur(10px);box-shadow:0 8px 30px rgba(0,0,0,.25)}
+    .title{display:flex;justify-content:space-between;gap:8px;font-weight:800;letter-spacing:.02em}.small{font-size:12px;color:var(--muted)}.bar{height:12px;background:#17213f;border-radius:99px;overflow:hidden;margin-top:8px;border:1px solid rgba(255,255,255,.08)}.fill{height:100%;width:0%;background:linear-gradient(90deg,#67e8ff,#d5a6ff,#ffe58a);box-shadow:0 0 16px #79f7ff;transition:width .25s}.row{display:flex;gap:8px;align-items:center;justify-content:space-between;margin-top:6px}
+    #log{position:absolute;left:14px;right:14px;bottom:126px;min-height:72px;display:flex;align-items:end}.msg{width:100%;font-size:14px;line-height:1.35}.controls{position:absolute;left:14px;right:14px;bottom:14px;display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.btn{border:1px solid rgba(185,240,255,.26);background:linear-gradient(180deg,rgba(43,58,112,.95),rgba(20,28,61,.95));color:var(--ink);border-radius:16px;min-height:48px;font-weight:800;font-size:14px;box-shadow:0 8px 0 rgba(0,0,0,.25), inset 0 1px rgba(255,255,255,.12)}.btn:active{transform:translateY(3px);box-shadow:0 5px 0 rgba(0,0,0,.25)}.btn[disabled]{opacity:.45;filter:saturate(.3)}
+    .wide{grid-column:1/3}.pill{padding:3px 8px;border-radius:99px;background:rgba(143,247,255,.14);color:var(--cyan)}#codex{position:absolute;right:14px;top:106px;width:156px;max-height:48%;overflow:auto;font-size:12px}.hidden{display:none}.caught{color:var(--green)}
+  </style>
+</head>
+<body>
+<div id="app" aria-label="WaitMote game">
+  <canvas id="game" width="480" height="860"></canvas>
+  <div class="hud"><div class="card"><div class="title"><span>WaitMote 等待微光</span><span id="state" class="pill">散步</span></div><div class="small" id="task">Agent 正在整理月光缓存…</div><div class="bar"><div id="fill" class="fill"></div></div><div class="row small"><span id="stats">微光 HP 30/30</span><span id="count">图鉴 0/6</span></div></div></div>
+  <div id="codex" class="card hidden"></div>
+  <div id="log"><div class="card msg" id="msg">点“开始等待”，让等待变成一段夜路。</div></div>
+  <div class="controls" id="controls"></div>
+</div>
+<script>
+(() => {
+  'use strict';
+  const canvas = document.getElementById('game'), ctx = canvas.getContext('2d');
+  const ui = {fill:document.getElementById('fill'), msg:document.getElementById('msg'), controls:document.getElementById('controls'), state:document.getElementById('state'), task:document.getElementById('task'), stats:document.getElementById('stats'), count:document.getElementById('count'), codex:document.getElementById('codex')};
+  const foes = [
+    {id:'dew', name:'露铃', hp:14, color:'#9dfffa', skill:'凝露'}, {id:'ember', name:'烬萤', hp:16, color:'#ffc46b', skill:'火星'},
+    {id:'moss', name:'苔团', hp:18, color:'#9dffb4', skill:'软撞'}, {id:'echo', name:'回声芽', hp:15, color:'#c7a6ff', skill:'回响'},
+    {id:'paper', name:'纸月雀', hp:13, color:'#fff0a8', skill:'月羽'}, {id:'ink', name:'墨影豆', hp:20, color:'#7ea2ff', skill:'影滴'}
+  ];
+  const saveKey='waitmote-save-v1';
+  let save = JSON.parse(localStorage.getItem(saveKey) || '{"caught":{},"walks":0}');
+  let mode='intro', progress=0, mote={x:240,y:610,hp:30,max:30,glow:0}, foe=null, stars=[], particles=[], step=0, busy=false;
+  const tasks=['Agent 正在整理月光缓存…','Agent 正在采样林间微风…','Agent 正在压缩星尘向量…','Agent 正在排队等待远方回应…','Agent 正在校准温柔推理…'];
+  function store(){localStorage.setItem(saveKey, JSON.stringify(save));}
+  function say(t){ui.msg.textContent=t;} function rnd(a,b){return Math.random()*(b-a)+a;}
+  function buttons(list){ui.controls.innerHTML=''; list.forEach(b=>{const el=document.createElement('button'); el.className='btn '+(b.wide?'wide':''); el.textContent=b.t; el.disabled=!!b.disabled; el.onclick=()=>!busy&&b.f(); ui.controls.appendChild(el);});}
+  function start(){mode='walk'; progress=0; mote.hp=mote.max; save.walks++; store(); say('微光踏上短短的夜路。等待条会自己前进，路上也许会遇见朋友。'); walkButtons();}
+  function walkButtons(){buttons([{t:'轻点前进',f:advance},{t:'图鉴',f:toggleCodex},{t:'休息 +6HP',f:()=>{mote.hp=Math.min(mote.max,mote.hp+6); say('微光在蘑菇灯旁休息，恢复了一点亮度。');},wide:true}]);}
+  function advance(){ progress=Math.min(100, progress+rnd(8,15)); mote.x=150+progress*1.8; mote.glow=1; if(progress>=100){say('等待完成！Agent 带回了一袋星尘。再次开始可继续收集。'); mode='done'; buttons([{t:'再等一轮',f:start},{t:'图鉴',f:toggleCodex}]); return;} if(Math.random()<.38) encounter(); else say(['树叶沙沙，进度悄悄涨了一截。','远处有蓝色萤火，像一个很小的提示。','等待没有消失，它变成了脚下的路。'][Math.floor(rnd(0,3))]);}
+  function encounter(){foe=JSON.parse(JSON.stringify(foes[Math.floor(rnd(0,foes.length))])); foe.max=foe.hp; mode='battle'; say(`${foe.name} 从雾里探头：要交换一点微光吗？`); battleButtons();}
+  function battleButtons(){buttons([{t:'微闪 5伤',f:()=>attack(5,'微光一闪')},{t:'安抚 3伤+回血',f:()=>{attack(3,'温柔安抚',true)}},{t:'星尘 8伤',f:()=>attack(8,'星尘划过')},{t:'收服',f:catchFoe}]);}
+  function attack(dmg, text, heal){busy=true; foe.hp=Math.max(0,foe.hp-dmg-Math.floor(rnd(0,3))); if(heal) mote.hp=Math.min(mote.max,mote.hp+4); burst(foe.color,330,420); if(foe.hp<=0){win(`${text}，${foe.name} 化成友好的光点。`); return;} setTimeout(()=>{const hurt=Math.floor(rnd(3,7)); mote.hp=Math.max(0,mote.hp-hurt); say(`${text}。${foe.name} 使用${foe.skill}，微光 -${hurt}HP。`); busy=false; if(mote.hp<=0){mode='walk'; mote.hp=12; say('微光暗了一下，在路边醒来。进度保留，继续慢慢等。'); walkButtons();} },450);}
+  function catchFoe(){const chance=.35+(1-foe.hp/foe.max)*.55; if(Math.random()<chance){save.caught[foe.id]=(save.caught[foe.id]||0)+1; store(); win(`${foe.name} 愿意同行！已记录到等待图鉴。`);} else {say(`${foe.name} 绕着收集瓶转了一圈，又跳开了。`); attack(0,'尝试收服');}}
+  function win(t){busy=false; mode='walk'; progress=Math.min(100,progress+8); say(t); foe=null; walkButtons();}
+  function toggleCodex(){ui.codex.classList.toggle('hidden'); ui.codex.innerHTML='<b>等待图鉴</b><br>'+foes.map(f=>`${save.caught[f.id]?'<span class="caught">●</span>':'○'} ${f.name} ×${save.caught[f.id]||0}`).join('<br>')+'<hr><button class="btn wide" onclick="localStorage.removeItem(\''+saveKey+'\');location.reload()">重置</button>';}
+  function burst(color,x,y){for(let i=0;i<18;i++)particles.push({x,y,vx:rnd(-2,2),vy:rnd(-3,1),life:40,color});}
+  function updateUi(){ui.fill.style.width=progress+'%'; ui.state.textContent=mode==='battle'?'遭遇':mode==='done'?'完成':'散步'; ui.task.textContent=tasks[Math.floor(Date.now()/2200)%tasks.length]; ui.stats.textContent=`微光 HP ${mote.hp}/${mote.max}${foe?' · '+foe.name+' '+foe.hp+'/'+foe.max:''}`; ui.count.textContent=`图鉴 ${Object.keys(save.caught).length}/${foes.length}`;}
+  function draw(){const w=canvas.width,h=canvas.height; const g=ctx.createLinearGradient(0,0,0,h); g.addColorStop(0,'#071538'); g.addColorStop(.55,'#160d2b'); g.addColorStop(1,'#07151d'); ctx.fillStyle=g; ctx.fillRect(0,0,w,h);
+    if(!stars.length) for(let i=0;i<80;i++) stars.push({x:rnd(0,w),y:rnd(20,430),r:rnd(.5,1.8),p:rnd(0,6)}); stars.forEach(s=>{ctx.globalAlpha=.45+Math.sin(Date.now()/700+s.p)*.25; ctx.fillStyle='#dff8ff'; ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,7); ctx.fill();}); ctx.globalAlpha=1;
+    ctx.fillStyle='rgba(27,45,70,.55)'; for(let i=0;i<9;i++){let x=i*62-25; ctx.beginPath(); ctx.moveTo(x,560); ctx.lineTo(x+32,250+(i%3)*35); ctx.lineTo(x+72,560); ctx.fill(); ctx.fillRect(x+29,430,10,210);} ctx.fillStyle='#101b25'; ctx.beginPath(); ctx.ellipse(240,700,210,92,0,0,7); ctx.fill(); ctx.strokeStyle='rgba(143,247,255,.22)'; ctx.lineWidth=5; ctx.beginPath(); ctx.moveTo(80,700); ctx.quadraticCurveTo(240,620,420,690); ctx.stroke();
+    drawMote(mote.x,mote.y); if(foe) drawFoe(foe,330,430); particles=particles.filter(p=>p.life-- >0); particles.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.vy+=.05;ctx.globalAlpha=p.life/40;ctx.fillStyle=p.color;ctx.beginPath();ctx.arc(p.x,p.y,3,0,7);ctx.fill();}); ctx.globalAlpha=1; updateUi(); requestAnimationFrame(draw);}
+  function drawMote(x,y){step+=.04; ctx.shadowBlur=25+18*mote.glow; ctx.shadowColor='#8ff7ff'; ctx.fillStyle='#b7fbff'; ctx.beginPath(); ctx.ellipse(x,y+Math.sin(step)*4,25,31,0,0,7); ctx.fill(); ctx.fillStyle='#13223d'; ctx.beginPath(); ctx.arc(x-8,y-4,3,0,7); ctx.arc(x+8,y-4,3,0,7); ctx.fill(); ctx.shadowBlur=0; mote.glow*=.92;}
+  function drawFoe(f,x,y){ctx.shadowBlur=22; ctx.shadowColor=f.color; ctx.fillStyle=f.color; ctx.beginPath(); ctx.ellipse(x,y,34,28,Math.sin(step)*.1,0,7); ctx.fill(); ctx.shadowBlur=0; ctx.fillStyle='#13223d'; ctx.fillRect(x-12,y-3,6,6); ctx.fillRect(x+8,y-3,6,6); ctx.fillStyle='rgba(0,0,0,.35)'; ctx.fillRect(x-38,y+42,76,8); ctx.fillStyle='#ff8aa8'; ctx.fillRect(x-38,y+42,76*(f.hp/f.max),8);}
+  canvas.addEventListener('pointerdown', e=>{if(mode==='walk'){advance(); burst('#8ff7ff',e.offsetX*(480/canvas.clientWidth),e.offsetY*(860/canvas.clientHeight));}});
+  buttons([{t:'开始等待',f:start,wide:true},{t:'图鉴',f:toggleCodex,wide:true}]); draw();
+})();
+</script>
+</body>
+</html>
