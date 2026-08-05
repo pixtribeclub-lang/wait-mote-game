@@ -1,28 +1,28 @@
 # WaitMote（等待微光）
 
-A tiny mobile-first browser game where waiting for a fake AI agent becomes a short night-forest walk.
+WaitMote（等待微光）是一款原创、移动端优先的单文件 Canvas 小游戏：把等待一个虚构 Agent 的过程，变成一段穿过夜色森林、收集微光生灵的短旅程。
 
-## Open / Play
+## 打开 / 运行
 
-- Open `index.html` directly in a modern browser, or
-- Use GitHub Pages for this repository, or
-- Preview with htmlpreview by visiting:
-  `https://htmlpreview.github.io/?https://github.com/pixtribeclub-lang/wait-mote-game/blob/main/index.html`
+- 直接用现代浏览器打开 `index.html`；或
+- 在仓库根目录启动任意静态服务器，例如 `python3 -m http.server 8000` 后访问 `http://localhost:8000/`；或
+- 使用 GitHub Pages / htmlpreview 预览仓库中的 `index.html`。
 
-## How to Play
+无需构建步骤、无需外部依赖，所有画面、UI、音效和逻辑都在 `index.html` 中。
 
-1. Tap **开始等待** to begin a waiting walk.
-2. Tap the canvas or **轻点前进** to advance the fake agent progress bar.
-3. Random soft encounters can appear on the path.
-4. In battle, choose one of three skills:
-   - **微闪**: steady damage
-   - **安抚**: light damage and healing
-   - **星尘**: stronger damage
-5. Tap **收服** to try adding a creature to the codex. Lower HP improves the chance.
-6. Progress and catches are saved with `localStorage`; use the reset button in the codex to start over.
+## 玩法
 
-## Notes
+1. 点击 **开始等待**，进入带有虚构 Agent 状态面板的等待流程。
+2. 点击画面或 **轻点前进** 推进等待进度，微光会穿过分层夜森林。
+3. 路上会随机遭遇 6 种原创微光生灵。
+4. 回合中可使用三种技能：
+   - **微闪**：稳定伤害，并触发青白闪弧特效。
+   - **安抚**：较低伤害并恢复微光 HP，触发安抚圆环。
+   - **星尘**：更高伤害，触发星尘坠落和屏幕反馈。
+5. 点击 **收服** 尝试把生灵加入等待图鉴；目标 HP 越低，成功率越高。
+6. 点击 **等待图鉴** 查看收集进度，也可重置存档。
 
-- No build step.
-- No external dependencies.
-- Single-file Canvas/CSS/JavaScript game with original shape-and-gradient art.
+## 存档与原创 IP
+
+- 存档使用 `localStorage`，键名保持为 `waitmote-save-v1`，新版数据会在同一键名下平滑扩展。
+- 本项目保留 WaitMote / 等待微光原创 IP：所有名称、形状、色彩和生灵设计均为原创，不包含 Pokémon、claudemon 或其他项目品牌素材。
