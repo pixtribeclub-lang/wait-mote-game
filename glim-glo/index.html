@@ -1,0 +1,1310 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#071526" />
+    <meta
+      name="description"
+      content="Guide two bonded fireflies through a luminous, dangerous night forest."
+    />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <link rel="manifest" href="manifest.json" />
+    <title>Lumenbound — Firefly Flight</title>
+    <style>
+      :root {
+        --cyan: #79f7da;
+        --orange: #ffc46b;
+        --ink: #071321;
+        --panel: rgba(7, 16, 36, 0.78);
+        --line: rgba(210, 241, 255, 0.2);
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: #030613;
+        color: #eefcf8;
+        font-family: Inter, ui-rounded, "SF Pro Rounded", system-ui, sans-serif;
+        touch-action: none;
+        user-select: none;
+      }
+      canvas {
+        position: fixed;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        display: block;
+      }
+      body::after {
+        content:""; position:fixed; inset:0; pointer-events:none; z-index:2;
+        background:radial-gradient(ellipse at center, transparent 45%, rgba(0,3,12,.28) 82%, rgba(0,2,8,.62) 110%);
+        mix-blend-mode:multiply;
+      }
+      .screen {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        background: radial-gradient(circle at 75% 12%, rgba(184, 216, 255, .1), transparent 34%),
+          linear-gradient(180deg, rgba(3,6,18,.08), rgba(2,5,15,.38));
+        transition: 0.25s;
+        z-index: 5;
+      }
+      .hidden {
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none !important;
+      }
+      .card {
+        text-align: left;
+        width: min(460px, 100%);
+        padding: 34px;
+        border: 1px solid rgba(202,229,255,.14);
+        border-radius: 10px;
+        background: linear-gradient(120deg, rgba(5,11,27,.9), rgba(8,19,38,.68));
+        box-shadow: 0 40px 120px #000c, inset 3px 0 #79f7da77, inset 0 1px #fff1;
+        backdrop-filter: blur(22px) saturate(1.2);
+      }
+      .logo {
+        font-size: clamp(42px, 13vw, 68px);
+        line-height: 0.9;
+        letter-spacing: -5px;
+        margin: 6px 0 12px;
+        text-shadow: 0 0 30px #5df2c866, 0 8px 30px #000;
+      }
+      .logo i {
+        font-style: normal;
+        color: var(--cyan);
+      }
+      .logo b {
+        color: var(--orange);
+        font-weight: 800;
+      }
+      .eyebrow {
+        font-size: 11px;
+        letter-spacing: 3px;
+        color: #b4c8e6;
+        text-transform: uppercase;
+      }
+      .tagline {
+        color: #a9bfc5;
+        font-size: 14px;
+        margin: 0 0 28px;
+        max-width: 330px;
+        line-height: 1.55;
+      }
+      button {
+        border: 0;
+        color: #eefcf8;
+        font: 700 14px inherit;
+        letter-spacing: 1.2px;
+        cursor: pointer;
+      }
+      .primary,
+      .secondary {
+        display: block;
+        width: 100%;
+        padding: 16px;
+        margin: 10px 0;
+        border-radius: 18px;
+        transition: transform .16s, filter .16s, border-color .16s;
+      }
+      .primary {
+        color: #09251f;
+        background: linear-gradient(135deg, var(--cyan), #9affdd);
+        box-shadow: 0 10px 34px #5df2c844, inset 0 1px #fff8;
+      }
+      .secondary {
+        background: #ffffff0b;
+        border: 1px solid var(--line);
+      }
+      .primary:active,
+      .secondary:active {
+        transform: scale(0.98);
+      }
+      .primary:hover, .secondary:hover { transform: translateY(-2px); filter: brightness(1.08); border-color: #b8ffe35c; }
+      .level-grid {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 7px;
+        margin: 20px 0;
+      }
+      .level {
+        aspect-ratio: 1;
+        border-radius: 13px;
+        background: #ffffff0a;
+        border: 1px solid var(--line);
+        color: #dceee9;
+        padding: 0;
+      }
+      .level.locked {
+        opacity: 0.35;
+      }
+      .level.done {
+        border-color: #5df2c877;
+        color: var(--cyan);
+      }
+      .level small {
+        display: block;
+        font-size: 8px;
+        color: #ffd27b;
+        margin-top: 2px;
+      }
+      #hud {
+        position: fixed;
+        inset: 0;
+        z-index: 3;
+        pointer-events: none;
+        padding: calc(12px + env(safe-area-inset-top)) 14px;
+      }
+      .hudrow {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+      }
+      .pill {
+        background:linear-gradient(90deg,rgba(4,10,24,.8),rgba(8,20,36,.58));
+        border:0;border-left:2px solid #79f7da88;border-radius:3px;
+        padding:9px 14px;backdrop-filter:blur(12px);box-shadow:0 12px 35px #0005;
+      }
+      .stats {
+        display: flex;
+        gap: 16px;
+        font-size: 12px;
+        letter-spacing: 1px;
+      }
+      .stats strong {
+        display: block;
+        font-size: 18px;
+        color: white;
+        letter-spacing: 0;
+      }
+      .mote {
+        color: #ffd36c;
+      }
+      .iconbtn {
+        pointer-events: auto;
+        width: 42px;
+        height: 42px;
+        border-radius: 50%;
+        background: #061225aa;
+        border: 1px solid #d9eeff22;
+        font-size: 17px;
+        margin-left: 6px;
+      }
+      .progress {
+        height: 2px;
+        background: #ffffff15;
+        border-radius: 4px;
+        margin-top: 10px;
+        overflow: hidden;
+      }
+      .progress i {
+        display: block;
+        height: 100%;
+        width: 0;
+        background: linear-gradient(90deg, var(--cyan), var(--orange));
+        box-shadow: 0 0 12px var(--cyan);
+      }
+      #dash {
+        position: fixed;
+        right: 18px;
+        bottom: calc(20px + env(safe-area-inset-bottom));
+        z-index: 4;
+        width: 68px;
+        height: 68px;
+        border-radius: 50%;
+        background: radial-gradient(circle at 38% 30%, #214b58, #071827 66%);
+        border: 1px solid #8affdf88;
+        box-shadow:
+          0 0 0 7px #06172599,
+          0 0 28px #5df2c822;
+        color: #d9fff4;
+        font-size: 10px;
+        letter-spacing: 2px;
+        pointer-events: auto;
+      }
+      .dashbar {
+        position: absolute;
+        bottom: calc(105px + env(safe-area-inset-bottom));
+        right: 22px;
+        width: 68px;
+        height: 5px;
+        border-radius: 5px;
+        background: #ffffff18;
+        overflow: hidden;
+      }
+      .dashbar i {
+        display: block;
+        height: 100%;
+        background: var(--cyan);
+        width: 100%;
+      }
+      #toast {
+        position: fixed;
+        z-index: 4;
+        left: 50%;
+        top: 23%;
+        transform: translate(-50%, -50%);
+        font-weight: 900;
+        font-size: 28px;
+        letter-spacing: 3px;
+        text-shadow: 0 0 20px currentColor;
+        pointer-events: none;
+        opacity: 0;
+        transition: 0.15s;
+      }
+      .hint {
+        position: fixed;
+        z-index: 3;
+        left: 50%;
+        bottom: 35px;
+        transform: translateX(-50%);
+        font-size: 11px;
+        letter-spacing: 1.5px;
+        color: #dceeffcc;
+        text-shadow: 0 2px 12px #000;
+        white-space: nowrap;
+        pointer-events: none;
+      }
+      .modal-title {
+        font-size: 30px;
+        margin: 8px;
+      }
+      .result {
+        font-size: 13px;
+        color: #adc5c5;
+        line-height: 1.6;
+      }
+      .result strong {
+        color: #fff;
+        font-size: 25px;
+      }
+      .stars {
+        font-size: 30px;
+        color: #ffd36c;
+        letter-spacing: 7px;
+        margin: 12px;
+      }
+      .tiny {
+        font-size: 11px;
+        color: #78959a;
+        margin-top: 17px;
+      }
+      .menu-meta {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+        margin: 0 0 18px;
+      }
+      .menu-meta span {
+        padding: 9px 4px;
+        border-radius: 12px;
+        background: #ffffff08;
+        border: 1px solid #ffffff0d;
+        color: #7fa4a5;
+        font-size: 9px;
+        letter-spacing: 1px;
+      }
+      .menu-meta strong {
+        display: block;
+        margin-top: 3px;
+        color: #effff9;
+        font-size: 14px;
+        letter-spacing: 0;
+      }
+      #menu .card { margin-right: min(48vw, 620px); }
+      .objective {
+        position: fixed;
+        left: 14px;
+        top: calc(88px + env(safe-area-inset-top));
+        font-size: 10px;
+        color: #8b9fb5;
+        letter-spacing: 1px;
+        border-left:1px solid #ffffff22;padding-left:10px;
+      }
+      .objective strong {
+        color: #fff;
+        margin-left: 5px;
+      }
+      .shield {
+        color: #90cfff;
+      }
+      #dash.charging {
+        transform: scale(0.94);
+        border-color: #fff;
+        box-shadow:
+          0 0 0 9px #5df2c822,
+          0 0 38px #5df2c866;
+      }
+      .chapter {
+        font-size: 10px;
+        color: #80aaa4;
+        margin: -10px 0 14px;
+        letter-spacing: 1.4px;
+      }
+      .control-strip { display:flex; justify-content:center; gap:14px; margin-top:16px; color:#8da8bc; font-size:9px; letter-spacing:1.2px; }
+      .control-strip span { padding:7px 10px; border:1px solid #ffffff12; border-radius:99px; background:#ffffff07; }
+      @media (min-width: 700px) {
+        #dash {
+          right: 36px;
+          bottom: 32px;
+        }
+        .card {
+          padding: 32px;
+        }
+        .hint {
+          bottom: 22px;
+        }
+      }
+      @media (max-width: 760px) {
+        #menu .card { margin-right: 0; }
+        .card { text-align: center; }
+        .tagline { margin-left: auto; margin-right: auto; }
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="game"></canvas>
+    <div id="menu" class="screen">
+      <div class="card">
+        <div class="eyebrow">A moonlit forest tale</div>
+        <div class="logo"><i>GLIM</i><span> & </span><b>GLO</b></div>
+        <p class="tagline">
+          Two lights, one living bond. Dance through a forest that remembers every flight.
+        </p>
+        <div class="menu-meta">
+          <span>BEST<strong id="menuBest">0</strong></span
+          ><span>PATHS<strong id="menuPaths">1 / 5</strong></span
+          ><span>TOTAL MOTES<strong id="menuMotes">0</strong></span>
+        </div>
+        <button class="primary" id="play">BEGIN THE JOURNEY</button
+        ><button class="secondary" id="levels">LEVELS</button
+        ><button class="secondary" id="endless">∞ &nbsp; ENDLESS FLIGHT</button>
+        <div class="control-strip"><span>MOVE · GUIDE</span><span>FLICK · SLINGSHOT</span><span>SPACE · DASH</span></div>
+      </div>
+    </div>
+    <div id="levelScreen" class="screen hidden">
+      <div class="card">
+        <div class="eyebrow">Choose a path</div>
+        <h2>Moonlit Journey</h2>
+        <div class="chapter">FIVE CHAPTERS · THREE-STAR MASTERY</div>
+        <div class="level-grid" id="levelGrid"></div>
+        <button class="secondary back">BACK</button>
+      </div>
+    </div>
+    <div id="hud" class="hidden">
+      <div class="hudrow">
+        <div class="pill stats">
+          <span>SCORE<strong id="score">0</strong></span
+          ><span class="mote">✦ MOTES<strong id="coins">0</strong></span
+          ><span class="shield">◇ BOND<strong id="shield">2</strong></span>
+        </div>
+        <div>
+          <button class="iconbtn" id="sound">♪</button
+          ><button class="iconbtn" id="pause">Ⅱ</button>
+        </div>
+      </div>
+      <div class="progress"><i id="progress"></i></div>
+      <div class="objective">
+        OBJECTIVE <strong id="objective">REACH THE PORTAL</strong>
+      </div>
+    </div>
+    <button id="dash" class="hidden">DASH</button>
+    <div class="dashbar hidden" id="dashBar"><i></i></div>
+    <div id="toast"></div>
+    <div id="hint" class="hint hidden">
+      MOVE TO GUIDE · FLICK FAST TO SLINGSHOT · SPACE TO DASH
+    </div>
+    <div id="modal" class="screen hidden">
+      <div class="card">
+        <div class="eyebrow" id="modalEye">Flight paused</div>
+        <h2 class="modal-title" id="modalTitle">PAUSED</h2>
+        <div id="result" class="result"></div>
+        <button class="primary" id="resume">RESUME</button
+        ><button class="secondary" id="retry">RESTART</button
+        ><button class="secondary" id="quit">MAIN MENU</button>
+      </div>
+    </div>
+    <script>
+      (() => {
+        "use strict";
+        const $ = (s) => document.querySelector(s),
+          canvas = $("#game"),
+          ctx = canvas.getContext("2d");
+        let W,
+          H,
+          dpr = 1,
+          last = 0,
+          scene = "menu",
+          paused = false,
+          level = 0,
+          endless = false,
+          muted = false;
+        const C = { cyan: "#5df2c8", orange: "#ffb04f" },
+          clamp = (v, a, b) => Math.max(a, Math.min(b, v)),
+          lerp = (a, b, t) => a + (b - a) * t,
+          rand = (a, b) => a + Math.random() * (b - a);
+        let audio,
+          score = 0,
+          coins = 0,
+          combo = 0,
+          comboT = 0,
+          dashEnergy = 1,
+          dist = 0,
+          goal = 2600,
+          speed = 145,
+          cam = 0,
+          shake = 0,
+          continued = false,
+          checkpoint = 0,
+          shields = 2,
+          invulnerable = 0,
+          totalRunMotes = 0,
+          generationEnd = 0,
+          dashCharge = 0,
+          charging = false,
+          obstacles = [],
+          particles = [],
+          motes = [],
+          stars = [],
+          fireflies = [],
+          clouds = [];
+        let pointer = { x: 0, y: 0, px: 0, py: 0, vx: 0, vy: 0, active: false, lastMove: 0 },
+          keys = {},
+          flies = [];
+        function resize() {
+          dpr = Math.min(devicePixelRatio || 1, 2);
+          W = innerWidth;
+          H = innerHeight;
+          canvas.width = W * dpr;
+          canvas.height = H * dpr;
+          ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+          if (!stars.length)
+            for (let i = 0; i < 80; i++)
+              stars.push({
+                x: Math.random(),
+                y: Math.random(),
+                r: rand(0.4, 1.7),
+                p: rand(0, 6.2),
+              });
+          if (!fireflies.length) for (let i=0;i<34;i++) fireflies.push({x:Math.random(),y:rand(.34,.9),p:rand(0,7),r:rand(.5,1.6),d:rand(.01,.04)});
+          if (!clouds.length) for (let i=0;i<8;i++) clouds.push({x:Math.random(),y:rand(.08,.45),w:rand(150,360),a:rand(.018,.055),s:rand(.002,.006)});
+        }
+        addEventListener("resize", resize);
+        resize();
+        function beep(f = 440, d = 0.08, type = "sine", v = 0.04) {
+          if (muted) return;
+          try {
+            audio ||= new (window.AudioContext || window.webkitAudioContext)();
+            let o = audio.createOscillator(),
+              g = audio.createGain();
+            o.type = type;
+            o.frequency.setValueAtTime(f, audio.currentTime);
+            g.gain.setValueAtTime(v, audio.currentTime);
+            g.gain.exponentialRampToValueAtTime(0.001, audio.currentTime + d);
+            o.connect(g).connect(audio.destination);
+            o.start();
+            o.stop(audio.currentTime + d);
+          } catch (e) {}
+        }
+        function show(id) {
+          ["menu", "levelScreen", "modal"].forEach((x) =>
+            $("#" + x).classList.add("hidden"),
+          );
+          if (id) $("#" + id).classList.remove("hidden");
+        }
+        function menu() {
+          scene = "menu";
+          paused = false;
+          show("menu");
+          $("#hud").classList.add("hidden");
+          $("#dash").classList.add("hidden");
+          $("#dashBar").classList.add("hidden");
+          $("#hint").classList.add("hidden");
+          $("#menuBest").textContent = Number(
+            localStorage.lumenBest || 0,
+          ).toLocaleString();
+          $("#menuPaths").textContent =
+            `${Math.min(5, +(localStorage.lumenLevel || 0) + 1)} / 5`;
+          $("#menuMotes").textContent = Number(
+            localStorage.lumenMotes || 0,
+          ).toLocaleString();
+        }
+        function buildLevels() {
+          let unlocked = +(localStorage.lumenLevel || 0);
+          $("#levelGrid").innerHTML = "";
+          ["Whisper", "Gates", "Chromatic", "Tempest", "Eclipse"].forEach(
+            (n, i) => {
+              let b = document.createElement("button");
+              b.className =
+                "level " +
+                (i > unlocked ? "locked" : i < unlocked ? "done" : "");
+              b.innerHTML =
+                i +
+                1 +
+                "<small>" +
+                (localStorage[`lumenStars${i}`] || n) +
+                "</small>";
+              b.onclick = () => {
+                if (i <= unlocked) start(i, false);
+              };
+              $("#levelGrid").append(b);
+            },
+          );
+        }
+        function start(l = 0, isEndless = false) {
+          level = l;
+          endless = isEndless;
+          scene = "game";
+          paused = false;
+          score = coins = combo = comboT = dist = cam = checkpoint = 0;
+          shields = 2;
+          invulnerable = 0;
+          dashCharge = 0;
+          charging = false;
+          continued = false;
+          goal = isEndless ? 1e9 : 2200 + l * 370;
+          speed = 145 + l * 7;
+          dashEnergy = 1;
+          flies = [
+            { x: W * 0.45, y: H * 0.55, vx: 0, vy: 0, c: C.cyan },
+            { x: W * 0.55, y: H * 0.61, vx: 0, vy: 0, c: C.orange },
+          ];
+          pointer.x = W * 0.65;
+          pointer.y = H * 0.5;
+          pointer.px = pointer.x; pointer.py = pointer.y; pointer.vx = pointer.vy = 0;
+          obstacles = [];
+          motes = [];
+          particles = [];
+          generationEnd = 0;
+          generate();
+          show();
+          $("#hud").classList.remove("hidden");
+          $("#dash").classList.remove("hidden");
+          $("#dashBar").classList.remove("hidden");
+          $("#hint").classList.remove("hidden");
+          setTimeout(() => $("#hint").classList.add("hidden"), 3500);
+          beep(520, 0.16, "sine");
+          $("#objective").textContent = isEndless
+            ? "SURVIVE · BUILD COMBOS"
+            : [
+                "FOLLOW THE MOTES",
+                "THREAD THE GATES",
+                "MATCH YOUR LIGHT",
+                "RIDE THE TEMPEST",
+                "REACH THE ECLIPSE",
+              ][l];
+          $("#shield").textContent = shields;
+        }
+        function generate() {
+          let startX = generationEnd || 560;
+          let max = endless ? startX + 7600 : goal + 300;
+          const lanes = [H * 0.29, H * 0.5, H * 0.71];
+          let section = 0;
+          for (let x = startX; x < max; x += 310) {
+            const lane = (section * 2 + level) % 3;
+            const safe = lanes[lane];
+            const tier = endless ? Math.min(4, Math.floor(dist / 1800)) : level;
+            const kind = (section + tier) % Math.min(6, 3 + tier);
+            if (kind === 0) {
+              obstacles.push({ type: "gate", x, y: safe, gap: 154 - Math.min(26, tier * 5), r: 25 });
+            } else if (kind === 1) {
+              [0, 1, 2].filter((i) => i !== lane).forEach((i) =>
+                obstacles.push({ type: "block", x: x + (i % 2) * 22, y: lanes[i], r: 30 }),
+              );
+            } else if (kind === 2) {
+              obstacles.push({ type: "mover", x, y: H * 0.5, r: 22, p: lane * Math.PI * 0.7 });
+              if (tier > 1) obstacles.push({ type: "block", x: x + 75, y: lane === 1 ? lanes[0] : lanes[1], r: 27 });
+            } else if (kind === 3) {
+              obstacles.push({ type: "pulse", x, y: lanes[(lane + 1) % 3], r: 22, p: section });
+              obstacles.push({ type: "pulse", x: x + 82, y: lanes[(lane + 2) % 3], r: 22, p: section + 2 });
+            } else if (kind === 4) {
+              obstacles.push({ type: "wind", x, y: safe, r: 72, dir: lane === 0 ? 1 : -1 });
+              obstacles.push({ type: "color", x: x + 105, y: lanes[(lane + 1) % 3], r: 32, c: section % 2 ? C.cyan : C.orange });
+            } else {
+              obstacles.push({ type: "spinner", x, y: H * 0.5, r: 18, p: lane * 1.8 });
+            }
+            for (let j = 0; j < 5; j++)
+              motes.push({ x: x - 150 + j * 34, y: lerp(H * 0.5, safe, j / 4) + Math.sin(j * Math.PI) * 12, got: false });
+            section++;
+          }
+          generationEnd = max;
+          if (!endless) {
+            for (let x = 760; x < goal - 250; x += 760)
+              obstacles.push({
+                type: "checkpoint",
+                x,
+                y: H * 0.5,
+                r: 52,
+                used: false,
+              });
+            obstacles.push({
+              type: "shield",
+              x: goal * 0.55,
+              y: H * 0.32,
+              r: 18,
+              used: false,
+            });
+            obstacles.push({ type: "portal", x: goal, y: H * 0.5, r: 65 });
+          }
+        }
+        function dash(power = 1) {
+          if (scene !== "game" || paused || dashEnergy < 0.3) return;
+          power = clamp(power, 0.65, 1.65);
+          let f = flies[0],
+            dx = pointer.x - f.x,
+            dy = pointer.y - f.y,
+            n = Math.hypot(dx, dy) || 1;
+          f.vx += (dx / n) * 470 * power;
+          f.vy += (dy / n) * 470 * power;
+          flies[1].vx += (dx / n) * 300 * power;
+          flies[1].vy += (dy / n) * 300 * power;
+          dashEnergy -= 0.3;
+          shake = 5;
+          burst(f.x, f.y, C.cyan, 18);
+          beep(150, 0.16, "sawtooth", 0.05);
+          if (navigator.vibrate) navigator.vibrate(power > 1.2 ? 28 : 14);
+        }
+        function burst(x, y, c, n = 10) {
+          for (let i = 0; i < n; i++)
+            particles.push({
+              x,
+              y,
+              vx: rand(-150, 150),
+              vy: rand(-150, 150),
+              life: rand(0.3, 0.8),
+              c,
+              r: rand(1, 4),
+            });
+        }
+        function toast(t, c = "#fff") {
+          let e = $("#toast");
+          e.textContent = t;
+          e.style.color = c;
+          e.style.opacity = 1;
+          clearTimeout(e._t);
+          e._t = setTimeout(() => (e.style.opacity = 0), 650);
+        }
+        function reward(n, x, y) {
+          combo++;
+          comboT = 2;
+          score += n * combo;
+          burst(x, y, "#ffe48a", 8);
+          let words = ["NICE", "GREAT", "AMAZING", "UNREAL"];
+          toast(
+            words[Math.min(3, Math.floor((combo - 1) / 2))] + " ×" + combo,
+            combo > 4 ? C.orange : C.cyan,
+          );
+          beep(450 + combo * 45, 0.09);
+        }
+        function damage(x, y) {
+          if (invulnerable > 0) return false;
+          if (shields > 0) {
+            shields--;
+            invulnerable = 1.7;
+            combo = 0;
+            shake = 12;
+            burst(x, y, "#90cfff", 24);
+            toast(shields ? "BOND WEAKENED" : "BOND CRITICAL", "#90cfff");
+            $("#shield").textContent = shields;
+            beep(120, 0.28, "square", 0.055);
+            if (navigator.vibrate) navigator.vibrate([35, 25, 35]);
+            return false;
+          }
+          fail();
+          return true;
+        }
+        function fail() {
+          paused = true;
+          scene = "result";
+          shake = 14;
+          beep(90, 0.5, "sawtooth", 0.07);
+          localStorage.lumenBest = Math.max(
+            +(localStorage.lumenBest || 0),
+            Math.floor(score),
+          );
+          $("#modalEye").textContent = endless
+            ? "The dark caught up"
+            : "The bond was broken";
+          $("#modalTitle").textContent = "FLIGHT ENDED";
+          $("#result").innerHTML =
+            `<strong>${Math.floor(score)}</strong><br>score · ${coins} motes`;
+          $("#resume").textContent =
+            endless && !continued
+              ? "CONTINUE ONCE"
+              : !endless && checkpoint
+                ? "RETURN TO CHECKPOINT"
+                : "TRY AGAIN";
+          $("#resume").style.display = "block";
+          $("#resume").onclick = () => {
+            if ((endless && !continued) || (!endless && checkpoint)) {
+              continued = true;
+              paused = false;
+              scene = "game";
+              if (!endless) {
+                dist = cam = checkpoint;
+                shields = 1;
+                $("#shield").textContent = shields;
+              }
+              flies.forEach((f, i) => {
+                f.x = W * 0.45 + i * 60;
+                f.y = H * 0.5;
+                f.vx = f.vy = 0;
+              });
+              invulnerable = 2;
+              show();
+            } else start(level, endless);
+          };
+          show("modal");
+        }
+        function win() {
+          paused = true;
+          scene = "result";
+          let rating = coins > 18 ? "★★★" : coins > 10 ? "★★☆" : "★☆☆";
+          score += coins * 50;
+          localStorage.lumenLevel = Math.max(
+            +(localStorage.lumenLevel || 0),
+            level + 1,
+          );
+          localStorage[`lumenStars${level}`] = rating;
+          localStorage.lumenBest = Math.max(
+            +(localStorage.lumenBest || 0),
+            Math.floor(score),
+          );
+          localStorage.lumenMotes = +(localStorage.lumenMotes || 0) + coins;
+          $("#modalEye").textContent = "Both lights made it";
+          $("#modalTitle").textContent = "PATH COMPLETE";
+          $("#result").innerHTML =
+            `<div class="stars">${rating}</div><strong>${Math.floor(score)}</strong><br>score · ${coins} motes`;
+          $("#resume").textContent = level < 4 ? "NEXT PATH" : "PLAY AGAIN";
+          $("#resume").style.display = "block";
+          $("#resume").onclick = () => start(level < 4 ? level + 1 : 0, false);
+          show("modal");
+          beep(660, 0.2);
+          setTimeout(() => beep(880, 0.3), 160);
+        }
+        function update(dt) {
+          if (scene !== "game" || paused) return;
+          dt = Math.min(dt, 0.033);
+          dist += speed * dt;
+          cam = dist;
+          score += dt * 10;
+          invulnerable = Math.max(0, invulnerable - dt);
+          if (charging) {
+            dashCharge = Math.min(1, dashCharge + dt * 1.15);
+            $("#dash").textContent = `${Math.round(65 + dashCharge * 100)}%`;
+          }
+          dashEnergy = clamp(dashEnergy + dt * 0.16, 0, 1);
+          comboT -= dt;
+          if (comboT <= 0) combo = 0;
+          let lead = flies[0],
+            tx = pointer.x,
+            ty = pointer.y;
+          if (keys.ArrowUp || keys.w) ty = lead.y - 150;
+          if (keys.ArrowDown || keys.s) ty = lead.y + 150;
+          if (keys.ArrowLeft || keys.a) tx = lead.x - 150;
+          if (keys.ArrowRight || keys.d) tx = lead.x + 150;
+          lead.vx += (tx - lead.x) * 6.4 * dt;
+          lead.vy += (ty - lead.y) * 6.4 * dt;
+          // A quick mouse flick transfers momentum to the bonded pair.
+          const flick = Math.hypot(pointer.vx, pointer.vy);
+          if (flick > 900 && performance.now() - pointer.lastMove < 90) {
+            const impulse = Math.min(34, flick * .018);
+            lead.vx += pointer.vx / flick * impulse;
+            lead.vy += pointer.vy / flick * impulse;
+            flies[1].vx += pointer.vx / flick * impulse * .55;
+            flies[1].vy += pointer.vy / flick * impulse * .55;
+          }
+          pointer.vx *= .78; pointer.vy *= .78;
+          for (let f of flies) {
+            f.vx *= Math.pow(0.06, dt);
+            f.vy *= Math.pow(0.06, dt);
+            f.x += f.vx * dt;
+            f.y += f.vy * dt;
+            f.x = clamp(f.x, 32, W - 32);
+            f.y = clamp(f.y, 50, H - 38);
+          }
+          let a = flies[0],
+            b = flies[1],
+            dx = b.x - a.x,
+            dy = b.y - a.y,
+            d = Math.hypot(dx, dy) || 1,
+            err = d - 82,
+            force = err * 8;
+          let nx = dx / d,
+            ny = dy / d;
+          a.vx += nx * force * dt;
+          a.vy += ny * force * dt;
+          b.vx -= nx * force * dt;
+          b.vy -= ny * force * dt;
+          for (let m of motes) {
+            if (m.got) continue;
+            let sx = m.x - cam + W * 0.32;
+            if (sx < -20) {
+              m.got = true;
+              continue;
+            }
+            for (let f of flies)
+              if (Math.hypot(f.x - sx, f.y - m.y) < 24) {
+                m.got = true;
+                coins++;
+                score += 75;
+                burst(sx, m.y, "#ffe385", 6);
+                beep(720 + (coins % 4) * 80, 0.05);
+              }
+          }
+          for (let o of obstacles) {
+            let x = o.x - cam + W * 0.32;
+            if (x < -120) continue;
+            if (o.type === "portal") {
+              if (x < W * 0.72 && Math.abs(dist - goal) < 90) {
+                win();
+                return;
+              }
+              continue;
+            }
+            if (o.type === "checkpoint") {
+              if (!o.used && x < flies[0].x) {
+                o.used = true;
+                checkpoint = o.x - 80;
+                shields = Math.min(2, shields + 1);
+                $("#shield").textContent = shields;
+                reward(250, x, o.y);
+                toast("CHECKPOINT LIT", C.cyan);
+              }
+              continue;
+            }
+            if (o.type === "shield") {
+              if (
+                !o.used &&
+                flies.some((f) => Math.hypot(f.x - x, f.y - o.y) < 32)
+              ) {
+                o.used = true;
+                shields = Math.min(3, shields + 1);
+                $("#shield").textContent = shields;
+                reward(120, x, o.y);
+                toast("BOND RESTORED", "#90cfff");
+              }
+              continue;
+            }
+            let oy = o.y;
+            if (o.type === "mover")
+              oy += Math.sin(performance.now() / 550 + o.p) * 90;
+            if (o.type === "wind") {
+              for (let f of flies)
+                if (Math.hypot(f.x - x, f.y - oy) < o.r)
+                  f.vy += o.dir * 150 * dt;
+              continue;
+            }
+            let rr = o.r;
+            if (o.type === "pulse")
+              rr =
+                20 + Math.max(0, Math.sin(performance.now() / 350 + o.p)) * 42;
+            if (o.type === "spinner") rr = 68;
+            for (let i = 0; i < 2; i++) {
+              let f = flies[i],
+                hit = Math.hypot(f.x - x, f.y - oy) < rr + 10;
+              if (o.type === "gate")
+                hit = Math.abs(f.x - x) < 18 && Math.abs(f.y - oy) > o.gap / 2;
+              if (!hit || o.dead) continue;
+              if (o.type === "block" && Math.hypot(f.vx, f.vy) > 260) {
+                o.dead = true;
+                reward(160, x, oy);
+                shake = 8;
+                continue;
+              }
+              if (o.type === "color" && f.c === o.c) {
+                if (!o.passed) {
+                  o.passed = true;
+                  reward(100, x, oy);
+                }
+                continue;
+              }
+              if (damage(x, oy)) return;
+              o.dead = true;
+              break;
+            }
+            if (
+              o.x < dist + W * 0.34 - 25 &&
+              !o.near &&
+              !o.dead &&
+              o.type !== "wind"
+            ) {
+              o.near = true;
+              let closest = Math.min(
+                ...flies.map((f) =>
+                  Math.hypot(f.y - o.y, f.x - (o.x - cam + W * 0.32)),
+                ),
+              );
+              if (closest < 100) reward(60, o.x - cam + W * 0.32, o.y);
+            }
+          }
+          if (endless) {
+            speed = Math.min(255, 145 + dist / 120);
+            if (dist > generationEnd - 1400) generate();
+          }
+          for (let p of particles) {
+            p.x += p.vx * dt;
+            p.y += p.vy * dt;
+            p.vx *= 0.96;
+            p.vy *= 0.96;
+            p.life -= dt;
+          }
+          particles = particles.filter((p) => p.life > 0);
+          shake *= 0.88;
+          $("#score").textContent = Math.floor(score);
+          $("#coins").textContent = coins;
+          $("#progress").style.width =
+            (endless
+              ? Math.min(100, (dist % 3000) / 30)
+              : Math.min(100, (dist / goal) * 100)) + "%";
+          $("#dashBar i").style.width = dashEnergy * 100 + "%";
+        }
+        function glow(x, y, r, c, a = 1) {
+          ctx.save();
+          ctx.globalCompositeOperation = "lighter";
+          let g = ctx.createRadialGradient(x, y, 0, x, y, r);
+          g.addColorStop(0, c);
+          g.addColorStop(0.2, c + "bb");
+          g.addColorStop(1, c + "00");
+          ctx.globalAlpha = a;
+          ctx.fillStyle = g;
+          ctx.beginPath();
+          ctx.arc(x, y, r, 0, 7);
+          ctx.fill();
+          ctx.restore();
+        }
+        function draw() {
+          ctx.save();
+          ctx.translate(rand(-shake, shake), rand(-shake, shake));
+          let bg = ctx.createLinearGradient(0, 0, 0, H);
+          bg.addColorStop(0, "#05091c");
+          bg.addColorStop(0.42, "#101c38");
+          bg.addColorStop(0.72, "#0a2027");
+          bg.addColorStop(1, "#03100f");
+          ctx.fillStyle = bg;
+          ctx.fillRect(-20, -20, W + 40, H + 40);
+          // cinematic moon with halo, surface shade and drifting cloud veil
+          const moonX=W*.78, moonY=H*.145, moonR=Math.min(58,Math.max(36,W*.045));
+          glow(moonX, moonY, moonR*3.2, "#b9d9ff", 0.2);
+          let mg=ctx.createRadialGradient(moonX-moonR*.25,moonY-moonR*.3,2,moonX,moonY,moonR);
+          mg.addColorStop(0,"#fffde8"); mg.addColorStop(.72,"#dbe8ee"); mg.addColorStop(1,"#9bb8ce");
+          ctx.fillStyle = mg;
+          // A single closed crescent silhouette—no overlapping secondary circle.
+          ctx.beginPath();
+          ctx.moveTo(moonX, moonY - moonR);
+          ctx.arc(
+            moonX,
+            moonY,
+            moonR,
+            -Math.PI / 2,
+            Math.PI / 2,
+            true,
+          );
+          ctx.quadraticCurveTo(
+            moonX + moonR * 0.72,
+            moonY,
+            moonX,
+            moonY - moonR,
+          );
+          ctx.closePath();
+          ctx.fill();
+          for (let s of stars) {
+            ctx.globalAlpha =
+              0.25 + 0.25 * Math.sin(performance.now() / 900 + s.p);
+            ctx.beginPath();
+            ctx.arc(s.x * W, s.y * H * 0.7, s.r, 0, 7);
+            ctx.fill();
+          }
+          ctx.globalAlpha = 1;
+          clouds.forEach(c=>{let x=((c.x*W+performance.now()*c.s)% (W+c.w))-c.w;ctx.globalAlpha=c.a;ctx.fillStyle="#d5e5ff";ctx.beginPath();ctx.ellipse(x,c.y*H,c.w,24,0,0,7);ctx.fill()});
+          ctx.globalAlpha=1;
+          // layered mountain and pine silhouettes create true parallax depth
+          ctx.fillStyle="#0b1830";ctx.beginPath();ctx.moveTo(0,H*.72);for(let x=0;x<=W;x+=90)ctx.lineTo(x,H*(.48+Math.sin(x*.012+cam*.00015)*.06));ctx.lineTo(W,H);ctx.lineTo(0,H);ctx.fill();
+          ctx.fillStyle = "#071b24";
+          for (let i = -2; i < W / 55 + 3; i++) {
+            let x = i * 55 - ((cam * 0.06) % 55),
+              h = 80 + (i % 3) * 25;
+            ctx.beginPath();
+            ctx.moveTo(x, H);
+            ctx.lineTo(x + 25, H - h);
+            ctx.lineTo(x + 50, H);
+            ctx.fill();
+          }
+          fireflies.forEach(f=>{let x=((f.x*W-cam*f.d)%(W+40)+W+40)%(W+40)-20,y=f.y*H+Math.sin(performance.now()/900+f.p)*12;glow(x,y,10,"#b6ff8d",.12);ctx.globalAlpha=.35+.35*Math.sin(performance.now()/400+f.p);ctx.fillStyle="#e8ffc5";ctx.fillRect(x,y,1.5,1.5)});ctx.globalAlpha=1;
+          ctx.fillStyle = "#041313";
+          ctx.fillRect(0, H - 22, W, 25);
+          // The collectible trail doubles as level telegraphing.
+          ctx.strokeStyle="#ffe8a916";ctx.lineWidth=10;ctx.lineCap="round";ctx.beginPath();
+          let pathStarted=false;
+          for(let m of motes){if(m.got)continue;let px=m.x-cam+W*.32;if(px<-20||px>W+40)continue;if(!pathStarted){ctx.moveTo(px,m.y);pathStarted=true}else ctx.lineTo(px,m.y)}
+          ctx.stroke();ctx.lineCap="butt";
+          for (let m of motes) {
+            if (m.got) continue;
+            let x = m.x - cam + W * 0.32;
+            if (x > -20 && x < W + 20) {
+              glow(x, m.y, 18, "#ffd86a", 0.55);
+              ctx.fillStyle = "#fff2ad";
+              ctx.beginPath();
+              ctx.arc(x, m.y, 3, 0, 7);
+              ctx.fill();
+            }
+          }
+          for (let o of obstacles) {
+            let x = o.x - cam + W * 0.32;
+            if (x < -130 || x > W + 130) continue;
+            let y = o.y;
+            if (o.type === "mover")
+              y += Math.sin(performance.now() / 550 + o.p) * 90;
+            ctx.save();
+            if (o.dead) ctx.globalAlpha = 0.12;
+            switch (o.type) {
+              case "checkpoint":
+                glow(x, y, o.used ? 75 : 45, C.cyan, o.used ? 0.45 : 0.2);
+                ctx.strokeStyle = o.used ? C.cyan : "#5df2c844";
+                ctx.lineWidth = 4;
+                ctx.setLineDash([6, 10]);
+                ctx.beginPath();
+                ctx.ellipse(x, y, 24, 58, 0, 0, 7);
+                ctx.stroke();
+                ctx.setLineDash([]);
+                break;
+              case "shield":
+                if (!o.used) {
+                  glow(x, y, 38, "#90cfff", 0.55);
+                  ctx.strokeStyle = "#c9e8ff";
+                  ctx.lineWidth = 3;
+                  ctx.beginPath();
+                  ctx.moveTo(x, y - 14);
+                  ctx.lineTo(x + 13, y - 6);
+                  ctx.lineTo(x + 9, y + 12);
+                  ctx.lineTo(x, y + 19);
+                  ctx.lineTo(x - 9, y + 12);
+                  ctx.lineTo(x - 13, y - 6);
+                  ctx.closePath();
+                  ctx.stroke();
+                }
+                break;
+              case "gate":
+                ctx.strokeStyle="#294b3d";ctx.shadowBlur=14;ctx.shadowColor="#66d69744";ctx.lineWidth=18;
+                ctx.beginPath();ctx.moveTo(x-8,0);ctx.quadraticCurveTo(x+18,y*.45,x,y-o.gap/2);ctx.moveTo(x+8,H);ctx.quadraticCurveTo(x-20,(H+y)*.5,x,y+o.gap/2);ctx.stroke();
+                ctx.strokeStyle="#79c99b88";ctx.lineWidth=2;ctx.setLineDash([4,15]);ctx.stroke();ctx.setLineDash([]);
+                for(let sy=20;sy<y-o.gap/2;sy+=34){ctx.fillStyle="#b45a70";ctx.beginPath();ctx.moveTo(x-9,sy);ctx.lineTo(x-24,sy+8);ctx.lineTo(x-7,sy+12);ctx.fill()}
+                break;
+              case "block":
+                ctx.translate(x, y);
+                ctx.rotate(.18);ctx.shadowBlur=18;ctx.shadowColor="#8b60ff55";
+                ctx.fillStyle="#182137";ctx.beginPath();for(let k=0;k<8;k++){let a=k/8*Math.PI*2,r=o.r*(k%2?1:.78);ctx.lineTo(Math.cos(a)*r,Math.sin(a)*r)}ctx.closePath();ctx.fill();
+                ctx.strokeStyle="#9275d966";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(-12,-8);ctx.lineTo(2,3);ctx.lineTo(-4,18);ctx.stroke();
+                break;
+              case "color":
+                glow(x, y, 55, o.c, 0.35);
+                ctx.strokeStyle = o.c;
+                ctx.lineWidth = 8;
+                ctx.beginPath();
+                ctx.arc(x, y, o.r, 0, 7);
+                ctx.stroke();
+                break;
+              case "mover":
+              case "pulse":
+                let br=o.type==="pulse"?20+Math.max(0,Math.sin(performance.now()/350+o.p))*42:o.r;
+                glow(x,y,br+26,"#ff547f",.36);ctx.save();ctx.translate(x,y);ctx.rotate(Math.sin(performance.now()/260+o.p)*.22);
+                ctx.fillStyle="#6b2c58";for(let k=0;k<7;k++){ctx.rotate(Math.PI*2/7);ctx.beginPath();ctx.ellipse(br*.65,0,br*.65,br*.18,0,0,7);ctx.fill()}ctx.fillStyle="#ff9db0";ctx.beginPath();ctx.arc(0,0,Math.max(5,br*.15),0,7);ctx.fill();ctx.restore();
+                break;
+              case "wind":
+                ctx.strokeStyle = "#a8e6d833";
+                ctx.lineWidth = 1.5;
+                for (let j = -2; j < 3; j++) {
+                  ctx.beginPath();
+                  ctx.arc(x+j*8, y + j * 18, 35+j*3, 0, Math.PI);
+                  ctx.stroke();
+                  ctx.fillStyle="#bfffe377";ctx.beginPath();ctx.arc(x+Math.sin(j*3)*35,y+j*18,2,0,7);ctx.fill();
+                }
+                break;
+              case "spinner":
+                ctx.translate(x, y);
+                ctx.rotate(performance.now() / 500 + o.p);
+                ctx.strokeStyle = "#3d1d33";
+                ctx.lineWidth = 12;
+                ctx.shadowBlur = 14;
+                ctx.shadowColor = "#ff668855";
+                ctx.beginPath();
+                ctx.moveTo(-68, 0);ctx.quadraticCurveTo(-25,-12,0,0);ctx.quadraticCurveTo(25,12,68,0);
+                ctx.stroke();
+                ctx.fillStyle = "#ff839a";
+                ctx.beginPath();
+                ctx.arc(0, 0, 7, 0, 7);
+                ctx.fill();
+                break;
+              case "portal":
+                glow(x, y, 95, "#82eaff", 0.5);
+                ctx.strokeStyle = "#b8fff0";
+                ctx.lineWidth = 7;
+                ctx.beginPath();
+                ctx.ellipse(x, y, 34, 68, 0, 0, 7);
+                ctx.stroke();
+            }
+            ctx.restore();
+          }
+          if (flies.length) {
+            let a = flies[0],
+              b = flies[1];
+            ctx.strokeStyle = "#dfffe966";
+            ctx.lineWidth = 2.5;
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = "#9effe1";
+            ctx.beginPath();
+            ctx.moveTo(a.x, a.y);
+            let mx = (a.x + b.x) / 2,
+              my = (a.y + b.y) / 2 + 12;
+            ctx.quadraticCurveTo(mx, my, b.x, b.y);
+            ctx.stroke();
+            flies.forEach((f, i) => {
+              glow(f.x, f.y, 38, f.c, 0.75);
+              ctx.save();
+              if (invulnerable > 0 && Math.floor(invulnerable * 12) % 2)
+                ctx.globalAlpha = 0.25;
+              ctx.translate(f.x, f.y);
+              const ang=Math.atan2(f.vy,f.vx); ctx.rotate(clamp(ang,-.55,.55));
+              ctx.fillStyle = f.c;
+              ctx.shadowBlur = 14;
+              ctx.shadowColor = f.c;
+              ctx.beginPath();
+              ctx.ellipse(0, 0, 8, 11, 0, 0, 7);
+              ctx.fill();
+              ctx.fillStyle="#0c1a27";ctx.shadowBlur=0;ctx.beginPath();ctx.arc(-2,-2,1.2,0,7);ctx.arc(2,-2,1.2,0,7);ctx.fill();
+              ctx.globalAlpha = 0.65;
+              ctx.fillStyle = "#eafffa";
+              let flap = Math.sin(performance.now() / 45 + i) * 0.3;
+              ctx.beginPath();
+              ctx.ellipse(-9, -1, 9, 4, -0.5 - flap, 0, 7);
+              ctx.ellipse(9, -1, 9, 4, 0.5 + flap, 0, 7);
+              ctx.fill();
+              ctx.restore();
+            });
+          }
+          for (let p of particles) {
+            ctx.globalAlpha = p.life;
+            ctx.fillStyle = p.c;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.r, 0, 7);
+            ctx.fill();
+          }
+          // foreground reeds create depth and motion
+          ctx.globalAlpha = 0.55;
+          ctx.fillStyle = "#020d0d";
+          for (let i = -1; i < W / 72 + 2; i++) {
+            let x = i * 72 - ((cam * 0.22) % 72),
+              h = 35 + ((i * 17) % 45);
+            ctx.beginPath();
+            ctx.moveTo(x, H);
+            ctx.quadraticCurveTo(x + 8, H - h, x + 3, H - h - 22);
+            ctx.lineTo(x + 12, H);
+            ctx.fill();
+          }
+          ctx.globalAlpha = 1;
+          ctx.restore();
+        }
+        function loop(t) {
+          let dt = (t - last) / 1000;
+          last = t;
+          update(dt || 0);
+          draw();
+          requestAnimationFrame(loop);
+        }
+        requestAnimationFrame(loop);
+        canvas.addEventListener("pointermove", (e) => {
+          const now=performance.now(), dtm=Math.max(8,now-(pointer.lastMove||now-16));
+          pointer.vx=(e.clientX-pointer.x)/dtm*1000;
+          pointer.vy=(e.clientY-pointer.y)/dtm*1000;
+          pointer.px=pointer.x; pointer.py=pointer.y; pointer.lastMove=now;
+          pointer.x = e.clientX;
+          pointer.y = e.clientY;
+          pointer.active = true;
+        });
+        canvas.addEventListener("pointerdown", (e) => {
+          pointer.x = e.clientX;
+          pointer.y = e.clientY;
+          pointer.active = true;
+          if (e.pointerType !== "mouse") dash();
+        });
+        canvas.addEventListener("pointerup", () => (pointer.active = false));
+        $("#dash").onpointerdown = (e) => {
+          e.stopPropagation();
+          charging = true;
+          dashCharge = 0;
+          $("#dash").classList.add("charging");
+          $("#dash").setPointerCapture?.(e.pointerId);
+        };
+        const releaseDash = (e) => {
+          if (!charging) return;
+          e?.stopPropagation();
+          charging = false;
+          dash(0.65 + dashCharge);
+          dashCharge = 0;
+          $("#dash").textContent = "DASH";
+          $("#dash").classList.remove("charging");
+        };
+        $("#dash").onpointerup = releaseDash;
+        $("#dash").onpointercancel = releaseDash;
+        addEventListener("keydown", (e) => {
+          keys[e.key] = true;
+          if (e.key === " ") {
+            e.preventDefault();
+            dash();
+          }
+          if (e.key === "Escape" && scene === "game") togglePause();
+        });
+        addEventListener("keyup", (e) => (keys[e.key] = false));
+        function togglePause() {
+          if (scene !== "game") return;
+          paused = !paused;
+          if (paused) {
+            $("#modalEye").textContent = "Take a breath";
+            $("#modalTitle").textContent = "PAUSED";
+            $("#result").innerHTML = "The forest will wait for you.";
+            $("#resume").textContent = "RESUME";
+            $("#resume").style.display = "block";
+            $("#resume").onclick = () => {
+              paused = false;
+              show();
+            };
+            show("modal");
+          } else show();
+        }
+        $("#play").onclick = () => start(0, false);
+        $("#levels").onclick = () => {
+          buildLevels();
+          show("levelScreen");
+        };
+        $("#endless").onclick = () => start(0, true);
+        document.querySelectorAll(".back").forEach((b) => (b.onclick = menu));
+        $("#pause").onclick = togglePause;
+        $("#retry").onclick = () => start(level, endless);
+        $("#quit").onclick = menu;
+        $("#sound").onclick = () => {
+          muted = !muted;
+          $("#sound").textContent = muted ? "×" : "♪";
+        };
+        menu();
+        if (
+          "serviceWorker" in navigator &&
+          location.protocol.startsWith("http")
+        )
+          navigator.serviceWorker.register("sw.js").catch(() => {});
+      })();
+    </script>
+  </body>
+</html>
